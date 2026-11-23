@@ -1,0 +1,382 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.store-theme {
+  font-family: var(--fonte-ui, var(--font-store-inter), ui-sans-serif, system-ui, sans-serif);
+  overflow-x: clip;
+  --store-ink: color-mix(in srgb, var(--cor-secundaria) 18%, #111827);
+  --store-ink-muted: color-mix(in srgb, var(--store-ink) 64%, #ffffff);
+  --store-ink-soft: color-mix(in srgb, var(--store-ink) 46%, #ffffff);
+  --store-bg: color-mix(in srgb, var(--cor-primaria) 3%, #fafafa);
+  --store-surface: #ffffff;
+  --store-surface-muted: color-mix(in srgb, var(--cor-primaria) 5%, #f4f4f5);
+  --store-border: color-mix(in srgb, var(--store-ink) 10%, transparent);
+  --store-border-strong: color-mix(in srgb, var(--store-ink) 18%, transparent);
+  --store-primary-soft: color-mix(in srgb, var(--cor-primaria) 11%, #ffffff);
+  --store-primary-ring: color-mix(in srgb, var(--cor-primaria) 26%, transparent);
+  --store-primary-shadow: color-mix(in srgb, var(--cor-primaria) 32%, transparent);
+  --store-gradient-banner:
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.34) 0%, transparent 52%),
+    radial-gradient(circle at 82% 78%, color-mix(in srgb, var(--cor-secundaria) 28%, transparent) 0%, transparent 58%),
+    linear-gradient(135deg, color-mix(in srgb, var(--cor-primaria) 86%, #ffffff) 0%, var(--cor-primaria) 52%, color-mix(in srgb, var(--cor-primaria) 78%, var(--cor-secundaria)) 100%);
+  --store-gradient-placeholder:
+    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.28) 0%, transparent 54%),
+    linear-gradient(145deg, color-mix(in srgb, var(--cor-primaria) 88%, #ffffff) 0%, var(--cor-primaria) 55%, color-mix(in srgb, var(--cor-primaria) 78%, var(--cor-secundaria)) 100%);
+  background-color: var(--store-bg);
+  color: var(--store-ink);
+}
+
+.store-font-display {
+  font-family: var(--fonte);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.store-card-hover {
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms ease;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .store-card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 18px 34px -18px color-mix(in srgb, var(--store-ink) 22%, transparent),
+      0 8px 18px -10px var(--store-primary-shadow);
+    border-color: var(--store-border-strong);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .store-reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition:
+      opacity 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 460ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .store-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes storeCounterPulse {
+  0% {
+    transform: scale(1);
+  }
+  38% {
+    transform: scale(1.34);
+  }
+  70% {
+    transform: scale(0.92);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.store-counter-pulse {
+  animation: storeCounterPulse 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes storeBackdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes storeSheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes storeDrawerIn {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes storeModalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.store-backdrop-in {
+  animation: storeBackdropIn 220ms ease-out;
+}
+
+.store-sheet-up {
+  animation: storeSheetUp 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.store-drawer-in {
+  animation: storeDrawerIn 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.store-modal-in {
+  animation: storeModalIn 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes storeSkeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.store-skeleton {
+  background-color: var(--store-surface-muted, #f4f4f5);
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--store-ink, #18181b) 5%, transparent) 0%,
+    color-mix(in srgb, var(--store-ink, #18181b) 11%, transparent) 50%,
+    color-mix(in srgb, var(--store-ink, #18181b) 5%, transparent) 100%
+  );
+  background-size: 200% 100%;
+  animation: storeSkeletonShimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .store-card-hover,
+  .store-counter-pulse,
+  .store-backdrop-in,
+  .store-sheet-up,
+  .store-drawer-in,
+  .store-modal-in,
+  .store-skeleton {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* Landing editorial dark — animações sutis */
+@media (prefers-reduced-motion: no-preference) {
+  .landing-reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 560ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .landing-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-card-hover {
+  transition:
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 240ms ease,
+    background-color 240ms ease,
+    box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .landing-card-hover:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 24px 54px -24px rgba(0, 0, 0, 0.85);
+  }
+}
+
+@keyframes landingMarquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.landing-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: landingMarquee 34s linear infinite;
+}
+
+.landing-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .landing-card-hover {
+    transition: none !important;
+    transform: none !important;
+  }
+
+  .landing-marquee-track {
+    animation: none !important;
+    transform: none !important;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+/* ===========================
+   Painel Admin SaaS App Theme
+   =========================== */
+.admin-app {
+  overflow-x: clip;
+  --admin-bg: #0b0d12;
+  --admin-surface: #12161f;
+  --admin-surface-2: #181e29;
+  --admin-surface-hover: #1e2635;
+  --admin-surface-glass: rgba(18, 22, 31, 0.86);
+  --admin-border: rgba(255, 255, 255, 0.08);
+  --admin-border-strong: rgba(255, 255, 255, 0.16);
+  --admin-text: #f4f6fb;
+  --admin-text-muted: #9aa4b8;
+  --admin-text-subtle: #667085;
+  --admin-accent: #fb7185;
+  --admin-accent-strong: #f43f5e;
+  --admin-accent-soft: rgba(244, 63, 94, 0.14);
+  --admin-accent-contrast: #ffffff;
+  --admin-chart-gmv: #38bdf8;
+  --admin-chart-commission: #fb7185;
+  --admin-chart-stores: #34d399;
+  --admin-grid: rgba(255, 255, 255, 0.06);
+  --admin-positive: #34d399;
+  --admin-positive-soft: rgba(16, 185, 129, 0.14);
+  --admin-negative: #fb7185;
+  --admin-negative-soft: rgba(244, 63, 94, 0.14);
+  --admin-warning: #fbbf24;
+  --admin-warning-soft: rgba(245, 158, 11, 0.14);
+  --admin-info: #38bdf8;
+  --admin-info-soft: rgba(56, 189, 248, 0.14);
+  --admin-skeleton-a: rgba(255, 255, 255, 0.05);
+  --admin-skeleton-b: rgba(255, 255, 255, 0.11);
+  background-color: var(--admin-bg);
+  color: var(--admin-text);
+}
+
+.admin-app[data-theme="light"] {
+  --admin-bg: #f4f6fa;
+  --admin-surface: #ffffff;
+  --admin-surface-2: #f8fafc;
+  --admin-surface-hover: #f1f5f9;
+  --admin-surface-glass: rgba(255, 255, 255, 0.88);
+  --admin-border: rgba(15, 23, 42, 0.08);
+  --admin-border-strong: rgba(15, 23, 42, 0.16);
+  --admin-text: #0f172a;
+  --admin-text-muted: #475569;
+  --admin-text-subtle: #94a3b8;
+  --admin-accent: #e11d48;
+  --admin-accent-strong: #be123c;
+  --admin-accent-soft: rgba(225, 29, 72, 0.1);
+  --admin-accent-contrast: #ffffff;
+  --admin-chart-gmv: #0284c7;
+  --admin-chart-commission: #e11d48;
+  --admin-chart-stores: #059669;
+  --admin-grid: rgba(15, 23, 42, 0.06);
+  --admin-positive: #059669;
+  --admin-positive-soft: rgba(5, 150, 105, 0.12);
+  --admin-negative: #dc2626;
+  --admin-negative-soft: rgba(220, 38, 38, 0.1);
+  --admin-warning: #d97706;
+  --admin-warning-soft: rgba(217, 119, 6, 0.12);
+  --admin-info: #0284c7;
+  --admin-info-soft: rgba(2, 132, 199, 0.12);
+  --admin-skeleton-a: rgba(15, 23, 42, 0.06);
+  --admin-skeleton-b: rgba(15, 23, 42, 0.11);
+}
+
+.admin-surface {
+  background-color: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+}
+
+.admin-surface-2 {
+  background-color: var(--admin-surface-2);
+  border: 1px solid var(--admin-border);
+}
+
+@keyframes adminShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.admin-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--admin-skeleton-a) 25%,
+    var(--admin-skeleton-b) 50%,
+    var(--admin-skeleton-a) 75%
+  );
+  background-size: 200% 100%;
+  animation: adminShimmer 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-skeleton {
+    animation: none !important;
+  }
+
+  .admin-app *,
+  .admin-app *::before,
+  .admin-app *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

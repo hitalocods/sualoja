@@ -1,0 +1,1 @@
+ALTER TABLE "lojas" ADD COLUMN "subconta_erro" text;

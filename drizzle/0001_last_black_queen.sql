@@ -1,0 +1,1 @@
+ALTER TABLE "lojas" ADD COLUMN "taxa_paga_por" "taxa_paga_por" DEFAULT 'loja' NOT NULL;
