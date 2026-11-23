@@ -12,6 +12,8 @@ const DEFAULT_CONFIG_FALLBACK: ConfiguracaoPlataforma = {
   email_suporte: "suporte@minhaloja.com.br",
   dias_trial: 14,
   pedido_minimo_plataforma_centavos: 1000,
+  tarifa_gateway_pix_centavos: 80,
+  margem_minima_centavos: 30,
   slugs_reservados: [...DEFAULT_SLUGS_RESERVADOS],
   atualizado_em: new Date(0),
 };
@@ -37,6 +39,9 @@ export async function getPlatformConfig(): Promise<ConfiguracaoPlataforma> {
         dias_trial: DEFAULT_CONFIG_FALLBACK.dias_trial,
         pedido_minimo_plataforma_centavos:
           DEFAULT_CONFIG_FALLBACK.pedido_minimo_plataforma_centavos,
+        tarifa_gateway_pix_centavos:
+          DEFAULT_CONFIG_FALLBACK.tarifa_gateway_pix_centavos,
+        margem_minima_centavos: DEFAULT_CONFIG_FALLBACK.margem_minima_centavos,
         slugs_reservados: [...DEFAULT_SLUGS_RESERVADOS],
       })
       .onConflictDoNothing()

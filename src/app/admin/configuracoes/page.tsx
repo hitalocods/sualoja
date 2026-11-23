@@ -70,6 +70,8 @@ export default async function AdminConfiguracoesPage() {
         initialPedidoMinimoPlataformaCentavos={
           config.pedido_minimo_plataforma_centavos
         }
+        initialTarifaGatewayPixCentavos={config.tarifa_gateway_pix_centavos}
+        initialMargemMinimaCentavos={config.margem_minima_centavos}
         initialSlugsReservados={config.slugs_reservados}
         atualizadoEmFormatada={
           config.atualizado_em.getTime() > 0

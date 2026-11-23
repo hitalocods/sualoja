@@ -122,7 +122,17 @@ export function CheckoutClient({
     setErroForm(null);
 
     if (!lojaHabilitada) {
-      setErroForm("Esta loja não pode receber pedidos neste momento.");
+      if (loja.sem_subconta || !loja.pronta_para_pedidos) {
+        setErroForm(
+          "Esta loja ainda não está configurada para receber pagamentos via Pix.",
+        );
+      } else if (!loja.aberta) {
+        setErroForm("A loja está fechada no momento.");
+      } else if (!loja.dentro_do_horario && loja.horario_aviso) {
+        setErroForm(loja.horario_aviso);
+      } else {
+        setErroForm("Esta loja não pode receber pedidos neste momento.");
+      }
       return;
     }
 

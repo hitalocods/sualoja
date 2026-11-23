@@ -459,6 +459,12 @@ export const configuracoes_plataforma = pgTable(
     )
       .notNull()
       .default(1000),
+    tarifa_gateway_pix_centavos: integer("tarifa_gateway_pix_centavos")
+      .notNull()
+      .default(80),
+    margem_minima_centavos: integer("margem_minima_centavos")
+      .notNull()
+      .default(30),
     slugs_reservados: jsonb("slugs_reservados")
       .$type<string[]>()
       .notNull()
@@ -475,6 +481,14 @@ export const configuracoes_plataforma = pgTable(
     check(
       "config_pedido_minimo_min",
       sql`${table.pedido_minimo_plataforma_centavos} >= 100`,
+    ),
+    check(
+      "config_tarifa_gateway_pix_non_neg",
+      sql`${table.tarifa_gateway_pix_centavos} >= 0`,
+    ),
+    check(
+      "config_margem_minima_non_neg",
+      sql`${table.margem_minima_centavos} >= 0`,
     ),
   ],
 );

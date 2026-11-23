@@ -1,12 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AbacatePayError,
+  buscarSubcontaAbacatePay,
   criarCobrancaPixTransparente,
   criarSubcontaAbacatePay,
   sanitizePixDescription,
+  simularPagamentoPixTransparente,
 } from "@/lib/abacatepay";
 import { calcularEstoqueDisponivel, mapaEstoqueDisponivelPorLoja } from "@/lib/inventory";
-import { calcularResumoESplitServidor } from "@/lib/money";
+import {
+  avaliarTarifaPlanoPedidoTipico,
+  calcularParteLojistaDoPedido,
+  calcularResumoESplitServidor,
+  validarAumentoSaldoSubconta,
+} from "@/lib/money";
 import {
   consultarStatusPedidoPublico,
   executarCriacaoPedido,
@@ -1080,6 +1087,442 @@ describe("Parte 4A - Pagamento Pix com Split e Estoque", () => {
           valor_novo_mascarado: "**.***.***/0001-81",
         },
       ]);
+    });
+  });
+
+  describe("5. Ajuste de Split com Piso, Invariante, Pedido Mínimo e Mensagens", () => {
+    const planosTeste = [
+      {
+        nome: "Start",
+        taxa_fixa_centavos: 100,
+        taxa_percentual: "2.50",
+        pisoEsperadoPorSubtotal: {
+          500: false, // 100 + 13 = 113 >= 110
+          1000: false, // 100 + 25 = 125 >= 110
+          3000: false, // 100 + 75 = 175 >= 110
+          10000: false, // 100 + 250 = 350 >= 110
+        },
+      },
+      {
+        nome: "Pro",
+        taxa_fixa_centavos: 50,
+        taxa_percentual: "1.50",
+        pisoEsperadoPorSubtotal: {
+          500: true, // 50 + 8 = 58 < 110
+          1000: true, // 50 + 15 = 65 < 110
+          3000: true, // 50 + 45 = 95 < 110
+          10000: false, // 50 + 150 = 200 >= 110
+        },
+      },
+      {
+        nome: "Premium",
+        taxa_fixa_centavos: 0,
+        taxa_percentual: "0.99",
+        pisoEsperadoPorSubtotal: {
+          500: true, // 5 < 110
+          1000: true, // 10 < 110
+          3000: true, // 30 < 110
+          10000: true, // 99 < 110
+        },
+      },
+    ] as const;
+
+    const subtotaisTeste = [500, 1000, 3000, 10000] as const;
+    const pagadoresTeste = ["cliente", "loja"] as const;
+
+    for (const plano of planosTeste) {
+      for (const subtotal of subtotaisTeste) {
+        for (const taxaPagaPor of pagadoresTeste) {
+          it(`${plano.nome} | subtotal R$ ${(subtotal / 100).toFixed(2)} | taxa paga por ${taxaPagaPor}`, () => {
+            const tarifaGateway = 80;
+            const margemMinima = 30;
+            const piso = tarifaGateway + margemMinima;
+
+            const res = calcularResumoESplitServidor({
+              itens: [{ preco_centavos: subtotal, qtd: 1 }],
+              tipo: "retirada",
+              frete_base_centavos: 0,
+              frete_gratis_acima_centavos: null,
+              pedido_minimo_centavos: 0,
+              taxa_fixa_centavos: plano.taxa_fixa_centavos,
+              taxa_percentual: plano.taxa_percentual,
+              taxa_paga_por: taxaPagaPor,
+              // Permite testar subtotal R$ 5,00 (500¢) diretamente contra o piso e invariante
+              pedido_minimo_plataforma_centavos: 500,
+              tarifa_gateway_pix_centavos: tarifaGateway,
+              margem_minima_centavos: margemMinima,
+            });
+
+            expect(res.piso_taxa_aplicado).toBe(
+              plano.pisoEsperadoPorSubtotal[subtotal],
+            );
+            expect(res.parte_plataforma_centavos).toBeGreaterThanOrEqual(piso);
+            // Invariante absoluta: soma dos splits <= total - tarifa_gateway_pix_centavos
+            expect(res.parte_lojista_centavos).toBeLessThanOrEqual(
+              res.total_centavos - tarifaGateway,
+            );
+            expect(res.parte_lojista_centavos + res.parte_plataforma_centavos).toBe(
+              res.total_centavos,
+            );
+            expect(res.parte_lojista_centavos).toBeGreaterThanOrEqual(1);
+          });
+        }
+      }
+    }
+
+    it("avalia aviso de pedido típico de R$ 30,00 para /admin/planos sem bloquear", () => {
+      const start = avaliarTarifaPlanoPedidoTipico({
+        taxa_fixa_centavos: 100,
+        taxa_percentual: "2.50",
+        tarifa_gateway_pix_centavos: 80,
+        margem_minima_centavos: 30,
+      });
+      expect(start.taxa_pedido_tipico_centavos).toBe(175);
+      expect(start.piso_minimo_centavos).toBe(110);
+      expect(start.abaixo_do_piso).toBe(false);
+
+      const pro = avaliarTarifaPlanoPedidoTipico({
+        taxa_fixa_centavos: 50,
+        taxa_percentual: "1.50",
+        tarifa_gateway_pix_centavos: 80,
+        margem_minima_centavos: 30,
+      });
+      expect(pro.taxa_pedido_tipico_centavos).toBe(95);
+      expect(pro.abaixo_do_piso).toBe(true);
+
+      const premium = avaliarTarifaPlanoPedidoTipico({
+        taxa_fixa_centavos: 0,
+        taxa_percentual: "0.99",
+        tarifa_gateway_pix_centavos: 80,
+        margem_minima_centavos: 30,
+      });
+      expect(premium.taxa_pedido_tipico_centavos).toBe(30);
+      expect(premium.abaixo_do_piso).toBe(true);
+    });
+
+    it("aplica pedido mínimo da loja no servidor e retorna 'Pedido mínimo de R$ X,XX'", async () => {
+      const fake = createFakeTransactionalDb({
+        estoqueInicial: 5,
+        precoCentavos: 1500,
+      });
+      fake.state.entrega.pedido_minimo_centavos = 2000;
+
+      const criarPixMock = vi.fn();
+      const res = await executarCriacaoPedido(
+        "casa-atelier",
+        {
+          tipo: "retirada",
+          cliente_nome: "João Silva",
+          cliente_whatsapp: "86999887766",
+          itens: [{ produtoId: PROD_1, qtd: 1 }],
+        },
+        {
+          dbClient: fake.db,
+          criarPixFn: criarPixMock,
+          pularHorarioCheck: true,
+          pedidoMinimoPlataformaCentavos: 1000,
+          tarifaGatewayPixCentavos: 80,
+          margemMinimaCentavos: 30,
+        },
+      );
+
+      expect(res).toEqual({
+        ok: false,
+        error: "Pedido mínimo de R$ 20,00",
+      });
+      expect(criarPixMock).not.toHaveBeenCalled();
+    });
+
+    it("aplica piso no servidor com console.warn [split] e envia split <= total - 80", async () => {
+      const fake = createFakeTransactionalDb({
+        estoqueInicial: 5,
+        precoCentavos: 3000,
+        taxaFixaCentavos: 0,
+        taxaPercentual: "0.99",
+        taxaPagaPor: "loja",
+      });
+      const warnSpy = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => undefined);
+
+      const criarPixMock = vi.fn(async (input) => ({
+        id: "pix_piso_1",
+        amount: input.amount,
+        status: "PENDING",
+        brCode: "000201...",
+        expiresAt: new Date("2026-11-22T14:15:00-03:00").toISOString(),
+      }));
+
+      try {
+        const res = await executarCriacaoPedido(
+          "casa-atelier",
+          {
+            tipo: "retirada",
+            cliente_nome: "Ana Costa",
+            cliente_whatsapp: "86999887766",
+            itens: [{ produtoId: PROD_1, qtd: 1 }],
+          },
+          {
+            dbClient: fake.db,
+            criarPixFn: criarPixMock,
+            agora: () => new Date("2026-11-22T14:00:00-03:00"),
+            pularHorarioCheck: true,
+            pedidoMinimoPlataformaCentavos: 1000,
+            tarifaGatewayPixCentavos: 80,
+            margemMinimaCentavos: 30,
+          },
+        );
+
+        expect(res.ok).toBe(true);
+        if (res.ok) {
+          expect(res.data.total_centavos).toBe(3000);
+          expect(res.data.taxa_servico_centavos).toBe(110);
+        }
+        // Split enviado ao lojista = 3000 - 110 = 2890 <= 3000 - 80 (2920)
+        expect(criarPixMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            amount: 3000,
+            splits: [{ subAccountId: "sacc_test_123", amount: 2890 }],
+          }),
+          undefined,
+        );
+        expect(warnSpy).toHaveBeenCalledWith(
+          "[split] Piso mínimo de taxa aplicado ao pedido",
+          expect.objectContaining({
+            taxaPlanoCentavos: 30,
+            taxaAplicadaCentavos: 110,
+          }),
+        );
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+
+    it("retorna mensagens específicas no checkout sem usar 'divisão de pagamento'", async () => {
+      // 1. Loja sem subconta
+      const fakeSemSub = createFakeTransactionalDb({
+        abacateSubcontaId: null,
+      });
+      const resSemSub = await executarCriacaoPedido(
+        "casa-atelier",
+        {
+          tipo: "retirada",
+          cliente_nome: "Carlos Lima",
+          cliente_whatsapp: "86999887766",
+          itens: [{ produtoId: PROD_1, qtd: 1 }],
+        },
+        {
+          dbClient: fakeSemSub.db,
+          pularHorarioCheck: true,
+          pedidoMinimoPlataformaCentavos: 1000,
+          tarifaGatewayPixCentavos: 80,
+          margemMinimaCentavos: 30,
+        },
+      );
+      expect(resSemSub.ok).toBe(false);
+      if (!resSemSub.ok) {
+        expect(resSemSub.error).toMatch(/não está configurada para receber pagamentos via Pix/i);
+        expect(resSemSub.error).not.toMatch(/divisão de pagamento/i);
+      }
+
+      // 2. SPLIT_EXCEEDS_NET vindo da AbacatePay
+      const fakeSplitNet = createFakeTransactionalDb({
+        estoqueInicial: 5,
+        precoCentavos: 3000,
+      });
+      const resSplitNet = await executarCriacaoPedido(
+        "casa-atelier",
+        {
+          tipo: "retirada",
+          cliente_nome: "Carlos Lima",
+          cliente_whatsapp: "86999887766",
+          itens: [{ produtoId: PROD_1, qtd: 1 }],
+        },
+        {
+          dbClient: fakeSplitNet.db,
+          pularHorarioCheck: true,
+          pedidoMinimoPlataformaCentavos: 1000,
+          tarifaGatewayPixCentavos: 80,
+          margemMinimaCentavos: 30,
+          criarPixFn: async () => {
+            throw new AbacatePayError({
+              code: "SPLIT_EXCEEDS_NET",
+              status: 400,
+              message: "Soma dos splits passa do valor líquido",
+            });
+          },
+        },
+      );
+      expect(resSplitNet.ok).toBe(false);
+      if (!resSplitNet.ok) {
+        expect(resSplitNet.error).toMatch(/Valor muito baixo para pagamento via Pix/i);
+        expect(resSplitNet.error).not.toMatch(/divisão de pagamento/i);
+      }
+    });
+  });
+
+  describe("simulação de pagamento, consulta de subconta e validação de split", () => {
+    it("simularPagamentoPixTransparente envia POST sem body com ?id= e retorna status PAID", async () => {
+      const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        expect(String(input)).toBe(
+          "https://api.abacatepay.com/v2/transparents/simulate-payment?id=pix_char_123",
+        );
+        expect(init?.method).toBe("POST");
+        expect(init?.body).toBeUndefined();
+        const headers = init?.headers as Record<string, string>;
+        expect(headers.Authorization).toBe("Bearer abc_dev_mock_key");
+        expect(headers["Content-Type"]).toBeUndefined();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            error: null,
+            data: {
+              id: "pix_char_123",
+              amount: 9710,
+              status: "PAID",
+              devMode: true,
+              brCode: "000201...",
+              expiresAt: "2026-11-23T21:55:22.853Z",
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      });
+
+      const res = await simularPagamentoPixTransparente("pix_char_123", {
+        apiKey: "abc_dev_mock_key",
+        fetchFn: fetchMock as typeof fetch,
+      });
+
+      expect(res.status).toBe("PAID");
+      expect(res.devMode).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("simularPagamentoPixTransparente bloqueia chave de produção (abc_prod_) sem chamar HTTP", async () => {
+      const fetchMock = vi.fn();
+
+      await expect(
+        simularPagamentoPixTransparente("pix_char_123", {
+          apiKey: "abc_prod_live_secret",
+          fetchFn: fetchMock as typeof fetch,
+        }),
+      ).rejects.toMatchObject({
+        code: "INVALID_REQUEST",
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("simularPagamentoPixTransparente propaga erro do Modo Teste como AbacatePayError", async () => {
+      const fetchMock = vi.fn(async () => {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            data: null,
+            error: "Simulate payment is only available in dev mode",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
+      });
+
+      await expect(
+        simularPagamentoPixTransparente("pix_char_123", {
+          apiKey: "abc_dev_mock_key",
+          fetchFn: fetchMock as typeof fetch,
+        }),
+      ).rejects.toMatchObject({
+        name: "AbacatePayError",
+        code: "INVALID_REQUEST",
+        status: 400,
+        apiMessage: "Simulate payment is only available in dev mode",
+      });
+    });
+
+    it("buscarSubcontaAbacatePay envia GET /sub-accounts/get?id= e retorna balance", async () => {
+      const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        expect(String(input)).toBe(
+          "https://api.abacatepay.com/v2/sub-accounts/get?id=sacc_123",
+        );
+        expect(init?.method).toBe("GET");
+        expect(init?.body).toBeUndefined();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            error: null,
+            data: {
+              id: "sacc_123",
+              name: "Casa Atelier",
+              taxId: "11222333000181",
+              balance: { available: 9523, blocked: 0 },
+              devMode: true,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      });
+
+      const sub = await buscarSubcontaAbacatePay("sacc_123", {
+        apiKey: "abc_dev_mock_key",
+        fetchFn: fetchMock as typeof fetch,
+      });
+
+      expect(sub.id).toBe("sacc_123");
+      expect(sub.balance?.available).toBe(9523);
+    });
+
+    it("calcularParteLojistaDoPedido calcula corretamente para taxa paga pela loja e pelo cliente", () => {
+      expect(
+        calcularParteLojistaDoPedido({
+          subtotal_centavos: 9110,
+          frete_centavos: 600,
+          taxa_servico_centavos: 187,
+          taxa_paga_por: "loja",
+          total_centavos: 9710,
+        }),
+      ).toBe(9523);
+
+      expect(
+        calcularParteLojistaDoPedido({
+          subtotal_centavos: 9110,
+          frete_centavos: 600,
+          taxa_servico_centavos: 187,
+          taxa_paga_por: "cliente",
+          total_centavos: 9897,
+        }),
+      ).toBe(9710);
+
+      expect(() =>
+        calcularParteLojistaDoPedido({
+          subtotal_centavos: 9110,
+          frete_centavos: 600,
+          taxa_servico_centavos: 187,
+          taxa_paga_por: "loja",
+          total_centavos: 9999,
+        }),
+      ).toThrow(/Total inconsistente no pedido/);
+    });
+
+    it("validarAumentoSaldoSubconta aprova quando aumento é exato e falha mostrando os dois valores se divergir", () => {
+      const ok = validarAumentoSaldoSubconta({
+        subAccountId: "sacc_123",
+        codigoPedido: "PED-OK123",
+        saldoAntesCentavos: 1000,
+        saldoDepoisCentavos: 10523,
+        splitEsperadoCentavos: 9523,
+      });
+      expect(ok.deltaCentavos).toBe(9523);
+
+      expect(() =>
+        validarAumentoSaldoSubconta({
+          subAccountId: "sacc_123",
+          codigoPedido: "PED-DIVERGE1",
+          saldoAntesCentavos: 1000,
+          saldoDepoisCentavos: 10443,
+          splitEsperadoCentavos: 9523,
+        }),
+      ).toThrow(/9523 centavos.*9443 centavos/s);
     });
   });
 });

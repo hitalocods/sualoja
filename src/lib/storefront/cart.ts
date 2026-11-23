@@ -1,7 +1,9 @@
 import {
   assertCentavos,
   calcularTaxaServicoCentavos,
+  MARGEM_MINIMA_PADRAO_CENTAVOS,
   PEDIDO_MINIMO_PLATAFORMA_PADRAO_CENTAVOS,
+  TARIFA_GATEWAY_PIX_PADRAO_CENTAVOS,
 } from "../money";
 
 export const TAXA_SERVICO_PLACEHOLDER_CENTAVOS = 0;
@@ -147,6 +149,8 @@ export interface TaxaCheckoutPreviewConfig {
   taxa_fixa_centavos: number;
   taxa_percentual: string | number;
   taxa_paga_por: "cliente" | "loja";
+  tarifa_gateway_pix_centavos?: number;
+  margem_minima_centavos?: number;
 }
 
 export function calcularCheckoutPreview(params: {
@@ -219,8 +223,14 @@ export function calcularCheckoutPreview(params: {
       taxa_fixa_centavos: params.taxaConfig.taxa_fixa_centavos,
       taxa_percentual: params.taxaConfig.taxa_percentual,
     });
+    const pisoMinimo =
+      (params.taxaConfig.tarifa_gateway_pix_centavos ??
+        TARIFA_GATEWAY_PIX_PADRAO_CENTAVOS) +
+      (params.taxaConfig.margem_minima_centavos ??
+        MARGEM_MINIMA_PADRAO_CENTAVOS);
+    const taxaComPiso = Math.max(taxaBruta, pisoMinimo);
     taxa_servico_centavos =
-      params.taxaConfig.taxa_paga_por === "cliente" ? taxaBruta : 0;
+      params.taxaConfig.taxa_paga_por === "cliente" ? taxaComPiso : 0;
   }
 
   const total_centavos =

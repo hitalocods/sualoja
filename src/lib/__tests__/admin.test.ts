@@ -110,6 +110,23 @@ test("schemas de loja e configurações da plataforma validam corretamente", () 
   assert.equal(configOk.success, true);
   if (configOk.success) {
     assert.equal(configOk.data.email_suporte, "suporte@minhaloja.com.br");
+    assert.equal(configOk.data.tarifa_gateway_pix_centavos, 80);
+    assert.equal(configOk.data.margem_minima_centavos, 30);
+  }
+
+  const configComTarifas = configuracoesPlataformaSchema.safeParse({
+    nome_plataforma: "MinhaLoja",
+    email_suporte: "suporte@minhaloja.com.br",
+    dias_trial: 14,
+    pedido_minimo_plataforma_centavos: 1000,
+    tarifa_gateway_pix_centavos: 95,
+    margem_minima_centavos: 45,
+    slugs_reservados: slugs,
+  });
+  assert.equal(configComTarifas.success, true);
+  if (configComTarifas.success) {
+    assert.equal(configComTarifas.data.tarifa_gateway_pix_centavos, 95);
+    assert.equal(configComTarifas.data.margem_minima_centavos, 45);
   }
 });
 

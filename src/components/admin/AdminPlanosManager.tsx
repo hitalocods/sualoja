@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   Check,
   CheckCircle2,
   Edit3,
@@ -17,7 +18,12 @@ import {
   criarPlanoAdminAction,
   editarPlanoAdminAction,
 } from "@/app/admin/actions";
-import { formatarCentavos } from "@/lib/money";
+import {
+  avaliarTarifaPlanoPedidoTipico,
+  formatarCentavos,
+  MARGEM_MINIMA_PADRAO_CENTAVOS,
+  TARIFA_GATEWAY_PIX_PADRAO_CENTAVOS,
+} from "@/lib/money";
 import {
   centavosParaInputReais,
   reaisParaCentavos,
@@ -71,7 +77,15 @@ function formatTaxaPreview(taxaFixaCentavos: number, taxaPercentual: string) {
   return `${pctLabel} por venda`;
 }
 
-export function AdminPlanosManager({ planos }: { planos: PlanoAdminRow[] }) {
+export function AdminPlanosManager({
+  planos,
+  tarifaGatewayPixCentavos = TARIFA_GATEWAY_PIX_PADRAO_CENTAVOS,
+  margemMinimaCentavos = MARGEM_MINIMA_PADRAO_CENTAVOS,
+}: {
+  planos: PlanoAdminRow[];
+  tarifaGatewayPixCentavos?: number;
+  margemMinimaCentavos?: number;
+}) {
   const router = useRouter();
   const [formModal, setFormModal] = useState<PlanoFormState | null>(null);
   const [feedback, setFeedback] = useState<{
@@ -367,6 +381,43 @@ export function AdminPlanosManager({ planos }: { planos: PlanoAdminRow[] }) {
                     </li>
                   </ul>
                 </div>
+
+                {(() => {
+                  const avaliacao = avaliarTarifaPlanoPedidoTipico({
+                    taxa_fixa_centavos: plano.taxa_fixa_centavos,
+                    taxa_percentual: plano.taxa_percentual,
+                    tarifa_gateway_pix_centavos: tarifaGatewayPixCentavos,
+                    margem_minima_centavos: margemMinimaCentavos,
+                  });
+                  if (!avaliacao.abaixo_do_piso) return null;
+                  return (
+                    <div
+                      className="mt-3 flex items-start gap-2 rounded-2xl border px-3 py-2.5 text-[11px] font-medium"
+                      style={{
+                        backgroundColor: "var(--admin-warning-soft)",
+                        borderColor: "var(--admin-warning)",
+                        color: "var(--admin-warning)",
+                      }}
+                    >
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        Em pedido típico de{" "}
+                        {formatarCentavos(avaliacao.pedido_tipico_centavos)},
+                        esta taxa rende{" "}
+                        <strong>
+                          {formatarCentavos(
+                            avaliacao.taxa_pedido_tipico_centavos,
+                          )}
+                        </strong>
+                        , abaixo da tarifa do gateway + margem (
+                        <strong>
+                          {formatarCentavos(avaliacao.piso_minimo_centavos)}
+                        </strong>
+                        ). O piso será aplicado no checkout.
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="mt-4 flex items-center gap-2">
@@ -630,6 +681,56 @@ export function AdminPlanosManager({ planos }: { planos: PlanoAdminRow[] }) {
                   Plano ativo (visível na landing e disponível para novas lojas)
                 </label>
               </div>
+
+              {(() => {
+                const taxaFixaPreview = reaisParaCentavos(
+                  formModal.taxaFixaReais,
+                );
+                const pctNorm = formModal.taxaPercentual
+                  .trim()
+                  .replace(",", ".");
+                if (
+                  taxaFixaPreview === null ||
+                  !/^\d+(\.\d{1,2})?$/.test(pctNorm)
+                ) {
+                  return null;
+                }
+                const avaliacao = avaliarTarifaPlanoPedidoTipico({
+                  taxa_fixa_centavos: taxaFixaPreview,
+                  taxa_percentual: pctNorm,
+                  tarifa_gateway_pix_centavos: tarifaGatewayPixCentavos,
+                  margem_minima_centavos: margemMinimaCentavos,
+                });
+                if (!avaliacao.abaixo_do_piso) return null;
+                return (
+                  <div
+                    className="sm:col-span-2 flex items-start gap-2 rounded-2xl border px-3.5 py-2.5 text-xs font-medium"
+                    style={{
+                      backgroundColor: "var(--admin-warning-soft)",
+                      borderColor: "var(--admin-warning)",
+                      color: "var(--admin-warning)",
+                    }}
+                  >
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>
+                      Aviso: em um pedido típico de{" "}
+                      {formatarCentavos(avaliacao.pedido_tipico_centavos)}, esta
+                      tarifa resulta em{" "}
+                      <strong>
+                        {formatarCentavos(
+                          avaliacao.taxa_pedido_tipico_centavos,
+                        )}
+                      </strong>
+                      , abaixo do piso gateway + margem (
+                      <strong>
+                        {formatarCentavos(avaliacao.piso_minimo_centavos)}
+                      </strong>
+                      ). Você ainda pode salvar; o piso será aplicado
+                      automaticamente nos pedidos.
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="mt-6 flex items-center justify-end gap-2">

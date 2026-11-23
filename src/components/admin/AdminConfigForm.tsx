@@ -31,6 +31,8 @@ interface AdminConfigFormProps {
   initialEmailSuporte: string;
   initialDiasTrial: number;
   initialPedidoMinimoPlataformaCentavos: number;
+  initialTarifaGatewayPixCentavos: number;
+  initialMargemMinimaCentavos: number;
   initialSlugsReservados: string[];
   atualizadoEmFormatada: string;
   auditoria: AuditoriaItemAdmin[];
@@ -43,6 +45,8 @@ export function AdminConfigForm({
   initialEmailSuporte,
   initialDiasTrial,
   initialPedidoMinimoPlataformaCentavos,
+  initialTarifaGatewayPixCentavos,
+  initialMargemMinimaCentavos,
   initialSlugsReservados,
   atualizadoEmFormatada,
   auditoria,
@@ -54,6 +58,12 @@ export function AdminConfigForm({
   const [diasTrial, setDiasTrial] = useState(String(initialDiasTrial));
   const [pedidoMinimoCentavos, setPedidoMinimoCentavos] = useState(
     String(initialPedidoMinimoPlataformaCentavos),
+  );
+  const [tarifaGatewayPixCentavos, setTarifaGatewayPixCentavos] = useState(
+    String(initialTarifaGatewayPixCentavos),
+  );
+  const [margemMinimaCentavos, setMargemMinimaCentavos] = useState(
+    String(initialMargemMinimaCentavos),
   );
   const [slugsText, setSlugsText] = useState(
     initialSlugsReservados.join(", "),
@@ -118,6 +128,8 @@ export function AdminConfigForm({
         email_suporte: emailSuporte,
         dias_trial: Number(diasTrial),
         pedido_minimo_plataforma_centavos: Number(pedidoMinimoCentavos),
+        tarifa_gateway_pix_centavos: Number(tarifaGatewayPixCentavos),
+        margem_minima_centavos: Number(margemMinimaCentavos),
         slugs_reservados: previewSlugs,
       });
 
@@ -324,6 +336,80 @@ export function AdminConfigForm({
                       Math.max(0, Number(pedidoMinimoCentavos) || 0) / 100,
                     )}{" "}
                     (padrão: 1000 centavos = R$ 10,00).
+                  </p>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="tarifa_gateway_pix_centavos"
+                    className="mb-1.5 block text-xs font-semibold"
+                    style={{ color: "var(--admin-text-muted)" }}
+                  >
+                    Tarifa gateway Pix (centavos)
+                  </label>
+                  <input
+                    id="tarifa_gateway_pix_centavos"
+                    type="number"
+                    min={0}
+                    max={100000}
+                    required
+                    value={tarifaGatewayPixCentavos}
+                    onChange={(e) =>
+                      setTarifaGatewayPixCentavos(e.target.value)
+                    }
+                    className="min-h-[44px] w-full rounded-2xl border px-4 text-sm outline-none"
+                    style={{
+                      backgroundColor: "var(--admin-surface-2)",
+                      borderColor: "var(--admin-border)",
+                      color: "var(--admin-text)",
+                    }}
+                  />
+                  <p
+                    className="mt-1 text-[11px]"
+                    style={{ color: "var(--admin-text-subtle)" }}
+                  >
+                    Custo fixo por Pix cobrado pelo gateway (padrão: 80 centavos
+                    = R$ 0,80).
+                  </p>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="margem_minima_centavos"
+                    className="mb-1.5 block text-xs font-semibold"
+                    style={{ color: "var(--admin-text-muted)" }}
+                  >
+                    Margem mínima da plataforma (centavos)
+                  </label>
+                  <input
+                    id="margem_minima_centavos"
+                    type="number"
+                    min={0}
+                    max={100000}
+                    required
+                    value={margemMinimaCentavos}
+                    onChange={(e) => setMargemMinimaCentavos(e.target.value)}
+                    className="min-h-[44px] w-full rounded-2xl border px-4 text-sm outline-none"
+                    style={{
+                      backgroundColor: "var(--admin-surface-2)",
+                      borderColor: "var(--admin-border)",
+                      color: "var(--admin-text)",
+                    }}
+                  />
+                  <p
+                    className="mt-1 text-[11px]"
+                    style={{ color: "var(--admin-text-subtle)" }}
+                  >
+                    Piso aplicado no split:{" "}
+                    {new Intl.NumberFormat("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    }).format(
+                      (Math.max(0, Number(tarifaGatewayPixCentavos) || 0) +
+                        Math.max(0, Number(margemMinimaCentavos) || 0)) /
+                        100,
+                    )}{" "}
+                    (tarifa + margem).
                   </p>
                 </div>
               </div>

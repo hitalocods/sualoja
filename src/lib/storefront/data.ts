@@ -153,6 +153,8 @@ export const carregarLojaPublicaPorSlug = cache(
         taxa_fixa_centavos: loja.taxa_fixa_centavos,
         taxa_percentual: loja.taxa_percentual,
         taxa_paga_por: loja.taxa_paga_por,
+        tarifa_gateway_pix_centavos: platformConfig.tarifa_gateway_pix_centavos,
+        margem_minima_centavos: platformConfig.margem_minima_centavos,
       },
       pedido_minimo_plataforma_centavos:
         platformConfig.pedido_minimo_plataforma_centavos,

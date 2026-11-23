@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "test": "tsx --test src/lib/__tests__/*.test.ts",
     "test:vitest": "vitest run",
+    "test:acceptance:split": "tsx --test tests/acceptance/split-abacatepay.acceptance.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",

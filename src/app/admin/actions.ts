@@ -673,6 +673,8 @@ export async function salvarConfiguracoesPlataformaAction(
       dias_trial: parsed.data.dias_trial,
       pedido_minimo_plataforma_centavos:
         parsed.data.pedido_minimo_plataforma_centavos,
+      tarifa_gateway_pix_centavos: parsed.data.tarifa_gateway_pix_centavos,
+      margem_minima_centavos: parsed.data.margem_minima_centavos,
       slugs_reservados: parsed.data.slugs_reservados,
       atualizado_em: new Date(),
     })
@@ -684,6 +686,8 @@ export async function salvarConfiguracoesPlataformaAction(
         dias_trial: parsed.data.dias_trial,
         pedido_minimo_plataforma_centavos:
           parsed.data.pedido_minimo_plataforma_centavos,
+        tarifa_gateway_pix_centavos: parsed.data.tarifa_gateway_pix_centavos,
+        margem_minima_centavos: parsed.data.margem_minima_centavos,
         slugs_reservados: parsed.data.slugs_reservados,
         atualizado_em: new Date(),
       },

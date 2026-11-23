@@ -6,13 +6,14 @@ import {
   type PlanoAdminRow,
 } from "@/components/admin/AdminPlanosManager";
 import { requireAdminSession } from "@/lib/auth/session";
+import { getPlatformConfig } from "@/lib/platform-config";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPlanosPage() {
   await requireAdminSession();
 
-  const [planosRows, lojasPorPlanoRows] = await Promise.all([
+  const [planosRows, lojasPorPlanoRows, platformConfig] = await Promise.all([
     db.select().from(planos).orderBy(asc(planos.mensalidade_centavos)),
     db
       .select({
@@ -22,6 +23,7 @@ export default async function AdminPlanosPage() {
       .from(lojas)
       .where(isNull(lojas.deletada_em))
       .groupBy(lojas.plano_id),
+    getPlatformConfig(),
   ]);
 
   const contagemPorPlano = new Map(
@@ -54,7 +56,11 @@ export default async function AdminPlanosPage() {
         </p>
       </div>
 
-      <AdminPlanosManager planos={planosSerializados} />
+      <AdminPlanosManager
+        planos={planosSerializados}
+        tarifaGatewayPixCentavos={platformConfig.tarifa_gateway_pix_centavos}
+        margemMinimaCentavos={platformConfig.margem_minima_centavos}
+      />
     </div>
   );
 }

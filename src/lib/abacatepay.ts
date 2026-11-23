@@ -271,6 +271,7 @@ async function abacatePayRequest<T>(
   path: string,
   body: unknown,
   opts: AbacatePayClientOptions = {},
+  method: "GET" | "POST" = "POST",
 ): Promise<T> {
   assertServerSide();
 
@@ -284,10 +285,18 @@ async function abacatePayRequest<T>(
 
   const baseUrl = (opts.baseUrl ?? ABACATEPAY_BASE_URL).replace(/\/+$/, "");
   const fullUrl = `${baseUrl}${path}`;
-  const method = "POST";
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const fetchFn = opts.fetchFn ?? fetch;
-  const maskedRequestBody = mascararCorpoParaLog(body, apiKey);
+  const hasJsonBody = method === "POST" && body !== undefined;
+  const maskedRequestBody = hasJsonBody ? mascararCorpoParaLog(body, apiKey) : null;
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
+    Accept: "application/json",
+  };
+  if (hasJsonBody) {
+    headers["Content-Type"] = "application/json";
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -296,12 +305,8 @@ async function abacatePayRequest<T>(
   try {
     response = await fetchFn(fullUrl, {
       method,
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(body),
+      headers,
+      ...(hasJsonBody ? { body: JSON.stringify(body) } : {}),
       signal: controller.signal,
       cache: "no-store",
     });
@@ -364,21 +369,31 @@ async function abacatePayRequest<T>(
     envelope?.success === false ||
     Boolean(envelope?.error);
 
-  if (isError) {
+  const isDev = process.env.NODE_ENV !== "production";
+
+  if (isDev) {
+    if (isError) {
+      console.error("[abacatepay]", {
+        method,
+        url: fullUrl,
+        status: response.status,
+        requestBody: maskedRequestBody,
+        responseBody: safeResponseBody,
+      });
+    } else {
+      console.info("[abacatepay]", {
+        method,
+        url: fullUrl,
+        status: response.status,
+        requestBody: maskedRequestBody,
+        responseBody: safeResponseBody,
+      });
+    }
+  } else if (isError) {
     console.error("[abacatepay]", {
       method,
-      url: fullUrl,
+      path,
       status: response.status,
-      requestBody: maskedRequestBody,
-      responseBody: safeResponseBody,
-    });
-  } else {
-    console.info("[abacatepay]", {
-      method,
-      url: fullUrl,
-      status: response.status,
-      requestBody: maskedRequestBody,
-      responseBody: safeResponseBody,
     });
   }
 
@@ -496,5 +511,55 @@ export async function criarCobrancaPixTransparente(
       data: dataPayload,
     },
     opts,
+  );
+}
+
+/** Consulta os dados e o saldo atual de uma subconta na AbacatePay. */
+export async function buscarSubcontaAbacatePay(
+  subAccountId: string,
+  opts: AbacatePayClientOptions = {},
+): Promise<AbacatePaySubAccount> {
+  const id = subAccountId.trim();
+  if (!id) {
+    throw new AbacatePayError({
+      code: "INVALID_REQUEST",
+      message: "Identificador da subconta não informado.",
+    });
+  }
+
+  return abacatePayRequest<AbacatePaySubAccount>(
+    `/sub-accounts/get?id=${encodeURIComponent(id)}`,
+    undefined,
+    opts,
+    "GET",
+  );
+}
+
+/** Simula o pagamento de um QRCode Pix no Modo Teste (sandbox) da AbacatePay. */
+export async function simularPagamentoPixTransparente(
+  cobrancaId: string,
+  opts: AbacatePayClientOptions = {},
+): Promise<AbacatePayTransparentPixCharge> {
+  const id = cobrancaId.trim();
+  if (!id) {
+    throw new AbacatePayError({
+      code: "INVALID_REQUEST",
+      message: "Identificador da cobrança Pix não informado.",
+    });
+  }
+
+  const apiKey = (opts.apiKey ?? process.env.ABACATEPAY_API_KEY ?? "").trim();
+  if (apiKey.startsWith("abc_prod_")) {
+    throw new AbacatePayError({
+      code: "INVALID_REQUEST",
+      message: "Simulação de pagamento só é permitida no Modo Teste (chave abc_dev_).",
+    });
+  }
+
+  return abacatePayRequest<AbacatePayTransparentPixCharge>(
+    `/transparents/simulate-payment?id=${encodeURIComponent(id)}`,
+    undefined,
+    opts,
+    "POST",
   );
 }

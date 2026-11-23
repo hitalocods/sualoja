@@ -19,7 +19,10 @@ import {
   criarCobrancaPixTransparente,
 } from "@/lib/abacatepay";
 import { mapaEstoqueDisponivelPorLoja } from "@/lib/inventory";
-import { calcularResumoESplitServidor } from "@/lib/money";
+import {
+  CalculoSplitError,
+  calcularResumoESplitServidor,
+} from "@/lib/money";
 import { getPlatformConfig } from "@/lib/platform-config";
 import { verificarRateLimitPedido } from "@/lib/rate-limit";
 import { verificarHorarioFuncionamento } from "@/lib/storefront/schedule";
@@ -81,6 +84,8 @@ export interface CriarPedidoDeps {
   agora?: () => Date;
   ip?: string;
   pedidoMinimoPlataformaCentavos?: number;
+  tarifaGatewayPixCentavos?: number;
+  margemMinimaCentavos?: number;
   pularRateLimit?: boolean;
   pularHorarioCheck?: boolean;
   gerarCodigoFn?: () => string;
@@ -96,9 +101,9 @@ function formatarErroPixParaComprador(err: unknown): string {
       case "FEATURE_DISABLED":
       case "SUBACCOUNT_NOT_FOUND":
       case "PIX_UNAVAILABLE":
-        return "Esta loja ainda não está habilitada para receber pagamentos via Pix.";
+        return "Esta loja ainda não está configurada para receber pagamentos via Pix.";
       case "SPLIT_EXCEEDS_NET":
-        return "Não foi possível processar a divisão de pagamento deste pedido.";
+        return "Valor muito baixo para pagamento via Pix. Adicione mais itens ao pedido.";
       case "TIMEOUT":
       case "NETWORK_ERROR":
         return "O provedor de pagamentos Pix não respondeu a tempo. Tente novamente.";
@@ -163,7 +168,7 @@ export async function executarCriacaoPedido(
   if (!lojaRow.abacate_subconta_id?.trim()) {
     return {
       ok: false,
-      error: "Loja indisponível para pedidos no momento.",
+      error: "Esta loja ainda não está configurada para receber pagamentos via Pix.",
     };
   }
 
@@ -292,9 +297,22 @@ export async function executarCriacaoPedido(
     };
   }
 
+  const precisaConfigPlataforma =
+    deps.pedidoMinimoPlataformaCentavos === undefined ||
+    deps.tarifaGatewayPixCentavos === undefined ||
+    deps.margemMinimaCentavos === undefined;
+  const platformConfig = precisaConfigPlataforma
+    ? await getPlatformConfig()
+    : null;
+
   const pedidoMinimoPlataforma =
     deps.pedidoMinimoPlataformaCentavos ??
-    (await getPlatformConfig()).pedido_minimo_plataforma_centavos;
+    platformConfig!.pedido_minimo_plataforma_centavos;
+  const tarifaGatewayPix =
+    deps.tarifaGatewayPixCentavos ??
+    platformConfig!.tarifa_gateway_pix_centavos;
+  const margemMinima =
+    deps.margemMinimaCentavos ?? platformConfig!.margem_minima_centavos;
 
   const itensConsolidados = consolidarItensCheckout(payload.itens);
   const produtoIds = itensConsolidados.map((i) => i.produtoId);
@@ -312,6 +330,10 @@ export async function executarCriacaoPedido(
     total_centavos: number;
     parte_lojista_centavos: number;
     parte_plataforma_centavos: number;
+    taxa_plano_original_centavos: number;
+    piso_taxa_aplicado: boolean;
+    piso_taxa_centavos: number;
+    tarifa_gateway_pix_centavos: number;
   };
 
   try {
@@ -397,7 +419,21 @@ export async function executarCriacaoPedido(
         taxa_percentual: lojaRow.taxa_percentual,
         taxa_paga_por: lojaRow.taxa_paga_por,
         pedido_minimo_plataforma_centavos: pedidoMinimoPlataforma,
+        tarifa_gateway_pix_centavos: tarifaGatewayPix,
+        margem_minima_centavos: margemMinima,
       });
+
+      if (calculo.piso_taxa_aplicado) {
+        console.warn("[split] Piso mínimo de taxa aplicado ao pedido", {
+          lojaId: lojaRow.id,
+          slug: lojaRow.slug,
+          codigoPedido,
+          taxaPlanoCentavos: calculo.taxa_plano_original_centavos,
+          taxaAplicadaCentavos: calculo.taxa_servico_centavos,
+          tarifaGatewayCentavos: tarifaGatewayPix,
+          margemMinimaCentavos: margemMinima,
+        });
+      }
 
       const [pedidoInserido] = await tx
         .insert(pedidos)
@@ -451,6 +487,22 @@ export async function executarCriacaoPedido(
       };
     });
   } catch (err) {
+    if (err instanceof CalculoSplitError) {
+      if (err.code === "PEDIDO_MINIMO_LOJA" || err.code === "PEDIDO_MINIMO_PLATAFORMA") {
+        return { ok: false, error: err.message };
+      }
+      if (err.code === "SPLIT_INVARIANT_VIOLATION") {
+        console.error("[split] Recusa por violação de invariante de split", {
+          lojaId: lojaRow.id,
+          codigoPedido,
+          erro: err.message,
+        });
+      }
+      return {
+        ok: false,
+        error: "Valor muito baixo para pagamento via Pix. Adicione mais itens ao pedido.",
+      };
+    }
     if (err instanceof PedidoCheckoutError) {
       return { ok: false, error: err.message, fieldErrors: err.fieldErrors };
     }
@@ -460,12 +512,85 @@ export async function executarCriacaoPedido(
     return { ok: false, error: "Não foi possível validar os itens do pedido." };
   }
 
+  const cancelarReservaPedidoPorSplit = async () => {
+    try {
+      await dbClient.transaction(async (tx) => {
+        await tx
+          .update(pedidos)
+          .set({ status: "cancelado" })
+          .where(
+            and(
+              eq(pedidos.id, committedOrder.pedidoId),
+              eq(pedidos.loja_id, lojaRow.id),
+            ),
+          );
+
+        await tx
+          .update(reservas_estoque)
+          .set({ liberada: true })
+          .where(
+            and(
+              eq(reservas_estoque.pedido_id, committedOrder.pedidoId),
+              eq(reservas_estoque.loja_id, lojaRow.id),
+            ),
+          );
+      });
+    } catch {
+      // Silencia erro secundário na compensação
+    }
+  };
+
+  // Invariante pré-gateway: soma dos splits <= total - tarifa_gateway_pix_centavos
+  const limiteLiquidoGateway =
+    committedOrder.total_centavos - committedOrder.tarifa_gateway_pix_centavos;
+  let splitLojistaFinal = committedOrder.parte_lojista_centavos;
+  let totalCobrancaFinal = committedOrder.total_centavos;
+
+  if (splitLojistaFinal > limiteLiquidoGateway) {
+    const piso = Math.max(
+      committedOrder.piso_taxa_centavos,
+      committedOrder.tarifa_gateway_pix_centavos,
+    );
+    const bruto = committedOrder.subtotal_centavos + committedOrder.frete_centavos;
+    totalCobrancaFinal =
+      lojaRow.taxa_paga_por === "cliente" ? bruto + piso : bruto;
+    splitLojistaFinal =
+      lojaRow.taxa_paga_por === "cliente" ? bruto : bruto - piso;
+
+    const novoLimiteLiquido =
+      totalCobrancaFinal - committedOrder.tarifa_gateway_pix_centavos;
+
+    if (splitLojistaFinal > novoLimiteLiquido || splitLojistaFinal < 1) {
+      console.error("[split] Invariante violada mesmo após recálculo com piso", {
+        lojaId: lojaRow.id,
+        codigoPedido: committedOrder.codigo,
+        totalCobrancaFinal,
+        splitLojistaFinal,
+        novoLimiteLiquido,
+      });
+      await cancelarReservaPedidoPorSplit();
+      return {
+        ok: false,
+        error:
+          "Erro interno ao calcular a divisão do pagamento. Tente novamente com outro valor.",
+      };
+    }
+
+    console.warn("[split] Split ajustado para o piso antes do envio ao gateway", {
+      lojaId: lojaRow.id,
+      codigoPedido: committedOrder.codigo,
+      pisoCentavos: piso,
+      splitLojistaFinal,
+      totalCobrancaFinal,
+    });
+  }
+
   // Fora da transação: gerar cobrança Pix transparente com split na AbacatePay
   try {
     const criarPixFn = deps.criarPixFn ?? criarCobrancaPixTransparente;
     const cobranca = await criarPixFn(
       {
-        amount: committedOrder.total_centavos,
+        amount: totalCobrancaFinal,
         description: `Pedido ${committedOrder.codigo} - ${lojaRow.nome}`,
         expiresIn: RESERVA_ESTOQUE_MINUTOS * 60,
         externalId: committedOrder.codigo,
@@ -477,7 +602,7 @@ export async function executarCriacaoPedido(
         splits: [
           {
             subAccountId: lojaRow.abacate_subconta_id.trim(),
-            amount: committedOrder.parte_lojista_centavos,
+            amount: splitLojistaFinal,
           },
         ],
       },

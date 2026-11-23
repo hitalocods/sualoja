@@ -114,6 +114,18 @@ export const configuracoesPlataformaSchema = z.object({
     .min(100, "O pedido mínimo da plataforma deve ser de pelo menos R$ 1,00.")
     .max(1_000_000, "Valor de pedido mínimo muito alto.")
     .default(1000),
+  tarifa_gateway_pix_centavos: z.coerce
+    .number({ error: "Informe a tarifa do gateway Pix." })
+    .int("A tarifa do gateway Pix deve ser um valor inteiro em centavos.")
+    .min(0, "A tarifa do gateway Pix não pode ser negativa.")
+    .max(100_000, "Valor de tarifa do gateway muito alto.")
+    .default(80),
+  margem_minima_centavos: z.coerce
+    .number({ error: "Informe a margem mínima." })
+    .int("A margem mínima deve ser um valor inteiro em centavos.")
+    .min(0, "A margem mínima não pode ser negativa.")
+    .max(100_000, "Valor de margem mínima muito alto.")
+    .default(30),
   slugs_reservados: z
     .array(
       z
