@@ -333,7 +333,7 @@ export function ProdutosManager({
           />
         </div>
 
-        <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
+        <div className="flex flex-wrap gap-1.5">
           {(
             [
               { id: "todos", label: "Todos" },

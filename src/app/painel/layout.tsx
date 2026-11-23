@@ -1,9 +1,8 @@
-import { AlertCircle, ExternalLink, Store } from "lucide-react";
-import Link from "next/link";
+import { AlertCircle } from "lucide-react";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/LogoutButton";
 import { ImpersonationBanner } from "@/components/painel/ImpersonationBanner";
-import { PainelNav } from "@/components/painel/PainelNav";
+import { PainelHeader } from "@/components/painel/PainelHeader";
 import { getSession } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -58,46 +57,17 @@ export default async function PainelLayout({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-16">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-zinc-50 pb-16">
       {session.impersonando && (
         <ImpersonationBanner lojaNome={session.impersonando.lojaNome} />
       )}
-      <header
-        className={`sticky ${session.impersonando ? "top-[48px] sm:top-[44px]" : "top-0"} z-30 border-b border-zinc-200 bg-white/95 backdrop-blur`}
-      >
-        <div className="mx-auto max-w-5xl px-4">
-          <div className="flex items-center justify-between py-3.5">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white">
-                <Store className="h-4 w-4" />
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-extrabold leading-tight text-zinc-950">
-                  {loja.nome}
-                </p>
-                <p className="text-xs text-zinc-500">/{loja.slug}</p>
-              </div>
-            </div>
+      <PainelHeader
+        lojaNome={loja.nome}
+        lojaSlug={loja.slug}
+        impersonando={Boolean(session.impersonando)}
+      />
 
-            <div className="flex shrink-0 items-center gap-2">
-              <Link
-                href={`/${loja.slug}`}
-                target="_blank"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800"
-              >
-                <span className="hidden sm:inline">Ver vitrine</span>
-                <span className="sm:hidden">Loja</span>
-                <ExternalLink className="h-3.5 w-3.5" />
-              </Link>
-              <LogoutButton />
-            </div>
-          </div>
-
-          <PainelNav />
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl space-y-5 px-4 pt-6">
+      <main className="mx-auto w-full min-w-0 max-w-5xl space-y-5 px-4 pt-6">
         {loja.status === "pendente" && (
           <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />

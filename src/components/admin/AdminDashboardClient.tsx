@@ -74,7 +74,7 @@ function KpiSparkCard({
   const sparkData = sparkline.map((v, idx) => ({ idx, v }));
 
   return (
-    <div className="admin-surface flex flex-col justify-between rounded-[20px] p-4 transition sm:p-5">
+    <div className="admin-surface flex min-w-0 flex-col justify-between overflow-hidden rounded-[20px] p-4 transition sm:p-5">
       <div className="flex items-start justify-between gap-2">
         <span
           className="text-xs font-semibold"
@@ -336,7 +336,7 @@ export function AdminDashboardClient({ data }: { data: AdminDashboardData }) {
     data.periodoDias === 90 ? 14 : data.periodoDias === 30 ? 4 : 0;
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 max-w-full space-y-5">
       {/* Header do Dashboard */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -440,7 +440,7 @@ export function AdminDashboardClient({ data }: { data: AdminDashboardData }) {
       {/* Linha de Gráficos */}
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         {/* Gráfico Grande: Faturamento e Comissão por dia */}
-        <div className="admin-surface rounded-[20px] p-4 sm:p-5 xl:col-span-8">
+        <div className="admin-surface min-w-0 overflow-hidden rounded-[20px] p-4 sm:p-5 xl:col-span-8">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-bold">
@@ -606,7 +606,7 @@ export function AdminDashboardClient({ data }: { data: AdminDashboardData }) {
         </div>
 
         {/* Gráfico Menor: Novas lojas por dia */}
-        <div className="admin-surface rounded-[20px] p-4 sm:p-5 xl:col-span-4">
+        <div className="admin-surface min-w-0 overflow-hidden rounded-[20px] p-4 sm:p-5 xl:col-span-4">
           <div className="mb-4 flex items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-bold">Novas lojas por dia</h2>
@@ -682,7 +682,7 @@ export function AdminDashboardClient({ data }: { data: AdminDashboardData }) {
       {/* Linha Inferior: Top Lojas + Funil + Aprovações Pendentes + Atividade Recente */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         {/* Ranking Top Lojas */}
-        <div className="admin-surface rounded-[20px] p-4 sm:p-5 lg:col-span-6">
+        <div className="admin-surface min-w-0 overflow-hidden rounded-[20px] p-4 sm:p-5 lg:col-span-6">
           <div className="mb-4 flex items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-bold">Top lojas por faturamento</h2>
@@ -802,7 +802,7 @@ export function AdminDashboardClient({ data }: { data: AdminDashboardData }) {
         </div>
 
         {/* Funil de Lojas */}
-        <div className="admin-surface rounded-[20px] p-4 sm:p-5 lg:col-span-6">
+        <div className="admin-surface min-w-0 overflow-hidden rounded-[20px] p-4 sm:p-5 lg:col-span-6">
           <div className="mb-4">
             <h2 className="text-base font-bold">Funil de lojas</h2>
             <p
@@ -871,7 +871,7 @@ export function AdminDashboardClient({ data }: { data: AdminDashboardData }) {
         </div>
 
         {/* Aprovações Pendentes */}
-        <div className="admin-surface rounded-[20px] p-4 sm:p-5 lg:col-span-6">
+        <div className="admin-surface min-w-0 overflow-hidden rounded-[20px] p-4 sm:p-5 lg:col-span-6">
           <div className="mb-4 flex items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-bold">Aprovações pendentes</h2>
@@ -987,7 +987,7 @@ export function AdminDashboardClient({ data }: { data: AdminDashboardData }) {
         </div>
 
         {/* Feed Atividade Recente */}
-        <div className="admin-surface rounded-[20px] p-4 sm:p-5 lg:col-span-6">
+        <div className="admin-surface min-w-0 overflow-hidden rounded-[20px] p-4 sm:p-5 lg:col-span-6">
           <div className="mb-4">
             <h2 className="text-base font-bold">Atividade recente</h2>
             <p

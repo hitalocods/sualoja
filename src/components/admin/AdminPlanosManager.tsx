@@ -241,7 +241,7 @@ export function AdminPlanosManager({ planos }: { planos: PlanoAdminRow[] }) {
           return (
             <div
               key={plano.id}
-              className={`admin-surface flex flex-col justify-between rounded-[20px] p-5 transition ${
+              className={`admin-surface flex min-w-0 flex-col justify-between rounded-[20px] p-5 transition ${
                 plano.ativo ? "" : "opacity-75"
               }`}
               style={{

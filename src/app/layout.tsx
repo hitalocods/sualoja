@@ -17,6 +17,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   themeColor: "#09090B",
 };
@@ -29,9 +31,9 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${plusJakarta.variable} max-w-full overflow-x-clip`}
+      className={`${plusJakarta.variable} max-w-full overflow-x-clip overscroll-x-none`}
     >
-      <body className="min-h-screen max-w-full overflow-x-clip bg-zinc-50 font-sans text-zinc-950 antialiased">
+      <body className="min-h-screen w-full max-w-full overflow-x-clip overscroll-x-none bg-zinc-50 font-sans text-zinc-950 antialiased">
         {children}
       </body>
     </html>

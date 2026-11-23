@@ -41,7 +41,6 @@ const NAV_ITEMS = [
   },
 ];
 
-const BOTTOM_ITEMS = NAV_ITEMS.slice(0, 4);
 const PERIODOS = ["7", "30", "90"] as const;
 
 interface AdminShellProps {
@@ -107,6 +106,24 @@ function AdminShellInner({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setMobileDrawerOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [mobileDrawerOpen]);
 
   function toggleTheme() {
     const next = theme === "dark" ? "light" : "dark";
@@ -212,9 +229,9 @@ function AdminShellInner({
   return (
     <div
       data-theme={theme}
-      className="admin-app min-h-[100dvh] w-full transition-colors duration-200"
+      className="admin-app min-h-[100dvh] w-full max-w-full overflow-x-clip transition-colors duration-200"
     >
-      <div className="flex min-h-[100dvh]">
+      <div className="flex min-h-[100dvh] w-full max-w-full">
         {/* Sidebar Fixa & Colapsável Desktop */}
         <aside
           className={`hidden md:sticky md:top-0 md:flex md:h-[100dvh] md:shrink-0 md:flex-col md:border-r md:transition-[width] md:duration-200 ${
@@ -396,6 +413,8 @@ function AdminShellInner({
                   type="button"
                   onClick={() => setMobileDrawerOpen(true)}
                   aria-label="Abrir menu"
+                  aria-expanded={mobileDrawerOpen}
+                  aria-controls="admin-mobile-drawer"
                   className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border md:hidden"
                   style={{
                     backgroundColor: "var(--admin-surface-2)",
@@ -529,7 +548,7 @@ function AdminShellInner({
 
             {/* Faixa compacta mobile: seletor de período + toggle demo */}
             <div
-              className="flex items-center justify-between gap-2 border-t px-3 py-1.5 sm:hidden"
+              className="flex flex-wrap items-center justify-between gap-2 border-t px-3 py-1.5 sm:hidden"
               style={{ borderColor: "var(--admin-border)" }}
             >
               <div className="flex items-center gap-1">
@@ -576,7 +595,7 @@ function AdminShellInner({
           </header>
 
           {/* Conteúdo */}
-          <main className="mx-auto w-full max-w-[1440px] flex-1 space-y-5 px-3 py-4 pb-24 sm:px-6 sm:py-6 md:pb-10">
+          <main className="mx-auto w-full min-w-0 max-w-[1440px] flex-1 space-y-5 overflow-x-clip px-3 py-4 pb-10 sm:px-6 sm:py-6">
             {impersonando && (
               <div
                 className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm"
@@ -626,43 +645,11 @@ function AdminShellInner({
         </div>
       </div>
 
-      {/* Barra Inferior Mobile (4 atalhos) */}
-      <nav
-        aria-label="Atalhos mobile"
-        className="fixed inset-x-0 bottom-0 z-30 border-t backdrop-blur-md md:hidden"
-        style={{
-          backgroundColor: "var(--admin-surface-glass)",
-          borderColor: "var(--admin-border)",
-          paddingBottom: "env(safe-area-inset-bottom)",
-        }}
-      >
-        <div className="grid grid-cols-4 px-1 py-1">
-          {BOTTOM_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href, item.exact);
-            const suffix =
-              item.href === "/admin" ? buildPreservedSuffix() : demoOnlySuffix;
-            return (
-              <Link
-                key={item.href}
-                href={`${item.href}${suffix}`}
-                className="flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl text-[11px] font-semibold transition"
-                style={{
-                  color: active ? "var(--admin-accent)" : "var(--admin-text-muted)",
-                }}
-              >
-                <Icon className="h-4 w-4" />
-                <span>{item.shortLabel}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-
       {/* Mobile Drawer Sidebar */}
       {mobileDrawerOpen && (
         <div
-          className="fixed inset-0 z-50 flex md:hidden"
+          id="admin-mobile-drawer"
+          className="fixed inset-0 z-[60] flex md:hidden"
           role="dialog"
           aria-modal="true"
           aria-label="Menu administrativo"
@@ -678,7 +665,7 @@ function AdminShellInner({
               borderColor: "var(--admin-border)",
             }}
           >
-            <div>
+            <div className="flex min-h-0 flex-1 flex-col">
               <div className="mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <span
@@ -711,7 +698,7 @@ function AdminShellInner({
                 </button>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="flex-1 space-y-1.5 overflow-y-auto">
                 {NAV_ITEMS.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.href, item.exact);

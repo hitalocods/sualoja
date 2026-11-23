@@ -759,7 +759,7 @@ export function AdminLojasManager({
                 <div
                   key={loja.id}
                   onClick={() => setDrawerLojaId(loja.id)}
-                  className="admin-surface cursor-pointer rounded-[20px] p-4 transition"
+                  className="admin-surface min-w-0 cursor-pointer overflow-hidden rounded-[20px] p-4 transition"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-3">
@@ -797,7 +797,7 @@ export function AdminLojasManager({
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-1.5">
+                    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
                       <span
                         className="rounded-full px-2.5 py-0.5 text-xs font-bold"
                         style={{
@@ -1092,7 +1092,7 @@ export function AdminLojasManager({
                 </span>
                 {drawerLoja.abacateSubcontaId ? (
                   <span
-                    className="rounded-full px-3 py-1 font-mono text-[11px] font-semibold"
+                    className="max-w-full break-all rounded-full px-3 py-1 font-mono text-[11px] font-semibold"
                     style={{
                       backgroundColor: "var(--admin-positive-soft)",
                       color: "var(--admin-positive)",
@@ -1149,7 +1149,7 @@ export function AdminLojasManager({
 
               {/* Mini KPIs */}
               <div className="grid grid-cols-3 gap-2.5">
-                <div className="admin-surface-2 rounded-2xl p-3">
+                <div className="admin-surface-2 min-w-0 rounded-2xl p-3">
                   <p
                     className="flex items-center gap-1 text-[11px]"
                     style={{ color: "var(--admin-text-subtle)" }}
@@ -1161,7 +1161,7 @@ export function AdminLojasManager({
                     {drawerLoja.totalProdutos}
                   </p>
                 </div>
-                <div className="admin-surface-2 rounded-2xl p-3">
+                <div className="admin-surface-2 min-w-0 rounded-2xl p-3">
                   <p
                     className="flex items-center gap-1 text-[11px]"
                     style={{ color: "var(--admin-text-subtle)" }}
@@ -1173,7 +1173,7 @@ export function AdminLojasManager({
                     {drawerLoja.pedidos30d}
                   </p>
                 </div>
-                <div className="admin-surface-2 rounded-2xl p-3">
+                <div className="admin-surface-2 min-w-0 rounded-2xl p-3">
                   <p
                     className="text-[11px]"
                     style={{ color: "var(--admin-text-subtle)" }}
@@ -1192,11 +1192,11 @@ export function AdminLojasManager({
                   Dados do proprietário e assinatura
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <span style={{ color: "var(--admin-text-subtle)" }}>
                       Dono
                     </span>
-                    <p className="font-semibold">{drawerLoja.donoNome}</p>
+                    <p className="break-words font-semibold">{drawerLoja.donoNome}</p>
                     <p
                       className="truncate"
                       style={{ color: "var(--admin-text-muted)" }}
@@ -1204,12 +1204,15 @@ export function AdminLojasManager({
                       {drawerLoja.donoEmail}
                     </p>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <span style={{ color: "var(--admin-text-subtle)" }}>
                       Contato & Doc
                     </span>
-                    <p className="font-semibold">{drawerLoja.whatsapp}</p>
-                    <p style={{ color: "var(--admin-text-muted)" }}>
+                    <p className="break-words font-semibold">{drawerLoja.whatsapp}</p>
+                    <p
+                      className="break-words"
+                      style={{ color: "var(--admin-text-muted)" }}
+                    >
                       {drawerLoja.cpfCnpj}
                     </p>
                     {!drawerLoja.abacateSubcontaId && (
@@ -1236,22 +1239,22 @@ export function AdminLojasManager({
                       </button>
                     )}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <span style={{ color: "var(--admin-text-subtle)" }}>
                       Plano & Trial
                     </span>
-                    <p className="font-semibold">{drawerLoja.planoNome}</p>
+                    <p className="break-words font-semibold">{drawerLoja.planoNome}</p>
                     <p style={{ color: "var(--admin-text-muted)" }}>
                       {drawerLoja.trialAteFormatado
                         ? `Trial até ${drawerLoja.trialAteFormatado}`
                         : "Assinatura regular"}
                     </p>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <span style={{ color: "var(--admin-text-subtle)" }}>
                       Bairro & Cadastro
                     </span>
-                    <p className="font-semibold">{drawerLoja.bairro}</p>
+                    <p className="break-words font-semibold">{drawerLoja.bairro}</p>
                     <p style={{ color: "var(--admin-text-muted)" }}>
                       Criada em {drawerLoja.criadaEmFormatada}
                     </p>

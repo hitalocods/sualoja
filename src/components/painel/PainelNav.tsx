@@ -10,7 +10,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const NAV_ITEMS = [
+export const PAINEL_NAV_ITEMS = [
   { href: "/painel", label: "Visão geral", icon: LayoutDashboard, exact: true },
   { href: "/painel/produtos", label: "Produtos", icon: Package, exact: false },
   { href: "/painel/aparencia", label: "Aparência", icon: Palette, exact: false },
@@ -24,9 +24,9 @@ export function PainelNav() {
   return (
     <nav
       aria-label="Navegação do painel"
-      className="no-scrollbar flex gap-1.5 overflow-x-auto border-t border-zinc-100 py-2.5"
+      className="hidden gap-1.5 border-t border-zinc-100 py-2.5 md:flex"
     >
-      {NAV_ITEMS.map((item) => {
+      {PAINEL_NAV_ITEMS.map((item) => {
         const ativo = item.exact
           ? pathname === item.href
           : pathname.startsWith(item.href);

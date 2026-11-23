@@ -409,7 +409,7 @@ export function AdminConfigForm({
                     }
                   }}
                   placeholder="Adicionar slug reservado (ex.: suporte)"
-                  className="min-h-[44px] flex-1 rounded-2xl border px-4 font-mono text-xs outline-none"
+                  className="min-h-[44px] min-w-0 flex-1 rounded-2xl border px-4 font-mono text-xs outline-none"
                   style={{
                     backgroundColor: "var(--admin-surface-2)",
                     borderColor: "var(--admin-border)",
@@ -557,7 +557,7 @@ export function AdminConfigForm({
                   key={item.id}
                   className="admin-surface-2 flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3 text-xs"
                 >
-                  <p>
+                  <p className="min-w-0 break-words">
                     <strong>{item.adminNome}</strong>{" "}
                     <span style={{ color: "var(--admin-text-subtle)" }}>
                       ({item.adminEmail})

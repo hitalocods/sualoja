@@ -381,7 +381,7 @@ export function AdminUsuariosManager({
       {/* Cards Mobile */}
       <div className="space-y-3 md:hidden">
         {filtrados.map((u) => (
-          <div key={u.id} className="admin-surface rounded-[20px] p-4">
+          <div key={u.id} className="admin-surface min-w-0 overflow-hidden rounded-[20px] p-4">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate text-sm font-extrabold">{u.nome}</p>
